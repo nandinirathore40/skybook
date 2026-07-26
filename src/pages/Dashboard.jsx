@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import './Dashboard.css'
 import { useNavigate } from 'react-router-dom';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://flight-backend-auda.onrender.com';
+/*const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://flight-backend-auda.onrender.com';*/
 
 import API from '../api'
 
@@ -203,6 +203,15 @@ const Dashboard = () => {
   const [messages, setMessages] = useState([])
   const [selectedChatUser, setSelectedChatUser] = useState(null)
   const [newMessage, setNewMessage] = useState('')
+  const [selectedBooking, setSelectedBooking] = useState(null);
+const [bookingForm, setBookingForm] = useState({
+  passenger_name: '',
+  passenger_email: '',
+  pnr_number: '',
+  seats_booked: '',
+  total_amount: '',
+  status: 'Pending'
+});
 
   const fetchDashboardData = async () => {
     try {
@@ -303,7 +312,17 @@ const Dashboard = () => {
       alert('Message not sent.')
     }
   }
-
+  const handleUpdateBooking = async () => {
+  try {
+    await axios.put(`${API_BASE_URL}/api/bookings/${selectedBooking.id}/`, bookingForm);
+    alert('Booking updated successfully!');
+    setSelectedBooking(null);
+    fetchDashboardData(); // Data refresh karne ke liye
+  } catch (error) {
+    console.error('Update error:', error);
+    alert('Failed to update booking.');
+  }
+};
   const selectedChatMessages = selectedChatUser
     ? messages.filter((msg) =>
         (Number(msg.sender) === Number(user.id) && Number(msg.receiver) === Number(selectedChatUser.id)) ||
@@ -494,7 +513,13 @@ const Dashboard = () => {
                               </span>
                             </td>
                             <td style={{ padding: '16px' }}>
-                              <button className="table-action-btn" onClick={() => handleSelectBookingClick(b)}>
+                             <button 
+  className="table-action-btn" 
+  onClick={() => { 
+    setSelectedBooking(b); // Yeh line modal khol degi
+    setBookingForm(b);     // Yeh line modal mein pura data bhar degi
+  }}
+>
                                 View Details
                               </button>
                             </td>

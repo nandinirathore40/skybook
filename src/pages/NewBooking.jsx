@@ -142,16 +142,16 @@ const NewBooking = () => {
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) return "Please enter a valid customer email address.";
     }
     if (activeStep === 3) {
-      if (!formData.passportNumber || formData.passportNumber.trim() === '') return "Passport Number is required.";
-      if (!formData.billingAddress || formData.billingAddress.trim() === '') return "Billing Address is required.";
-    }
-    if (activeStep === 4) {
-      for (let i = 0; i < passengers.length; i++) {
-        if (!passengers[i].name || passengers[i].name.trim() === '') return `Passenger #${i + 1} Name cannot be empty.`;
-        if (!passengers[i].dob || passengers[i].dob.trim() === '') return `Passenger #${i + 1} Date of Birth is required.`;
-        if (!passengers[i].gender || passengers[i].gender === '') return `Passenger #${i + 1} Gender is required.`;
-      }
-    }
+  if (!formData.billingAddress || formData.billingAddress.trim() === '') return "Billing Address is required.";
+}
+if (activeStep === 4) {
+  for (let i = 0; i < passengers.length; i++) {
+    if (!passengers[i].name || passengers[i].name.trim() === '') return `Passenger #${i + 1} Name cannot be empty.`;
+    if (!passengers[i].dob || passengers[i].dob.trim() === '') return `Passenger #${i + 1} Date of Birth is required.`;
+    if (!passengers[i].gender || passengers[i].gender === '') return `Passenger #${i + 1} Gender is required.`; // 👈 Gender loop check add kiya
+   if (!passengers[i].passportNumber || passengers[i].passportNumber.trim() === '') return `Passenger #${i + 1} Passport Number is required.`;
+  }
+}
     return null; 
   };
 
@@ -238,6 +238,18 @@ const NewBooking = () => {
   const showAlert = (title, message, type = 'info', onClose = null) => {
     setCustomAlert({ title, message, type, onClose });
   };
+ 
+      const addSegment = () => {
+  setMultiCitySegments([...multiCitySegments, { depCity: '', arrCity: '', depTime: '' }]);
+};
+
+const removeSegment = (index) => {
+  if (multiCitySegments.length > 2) {
+    setMultiCitySegments(multiCitySegments.filter((_, i) => i !== index));
+  } else {
+    showAlert("Info", "At least 2 segments are required.", "info");
+  }
+};
 
   // FIXED: Completely cleaned up duplicate variables declarations and combined structures cleanly
   const handleSubmit = async (e) => {
@@ -248,38 +260,44 @@ const NewBooking = () => {
       return;
     }
 
-    const combinedNames = passengers.map(p => p.name.trim()).join(', ');
-    const combinedDobs = passengers.map(p => p.dob).join(', ');
-    const combinedGenders = passengers.map(p => p.gender || 'Not Specified').join(', ');
-    const formattedExpiry = formData.expiry ? formData.expiry : "12/28";
-    const completeContact = `${formData.countryCode || '+1'} ${formData.phoneNumber || ''}`.trim();
-    
-    const payload = {
-      agent: user?.id,
-      pnr_number: formData.pnr.trim().toUpperCase(),
-      passport_number: formData.passportNumber ? formData.passportNumber.trim().toUpperCase() : '',
-      passenger_name: combinedNames,
-      passenger_dob: combinedDobs,
-      passenger_gender: combinedGenders,
-      passenger_email: formData.email.trim().toLowerCase(),
-      contact_number: completeContact,
-      status: 'Pending',
-      seats_booked: passengers.length,
-      airline_name: formData.airlineName || "Roamify Carrier Services",
-      cabin_class: formData.cabinClass,
-      card_holder_name: formData.cardHolderName,
-      card_number: formData.cardNumber,
-      card_type: formData.currency === 'USD' ? 'Visa' : 'Mastercard',
-      expiry_date: formattedExpiry,
-      billing_address: formData.billingAddress,
-      total_amount: String(totalAmount),
+const combinedNames = passengers.map(p => p.name.trim()).join(', ');
+const combinedDobs = passengers.map(p => p.dob).join(', ');
+const combinedGenders = passengers.map(p => p.gender || 'Not Specified').join(', '); // 👈 Genders array map kiya
+const formattedExpiry = formData.expiry ? formData.expiry : "12/28";
+const completeContact = `${formData.countryCode || '+1'} ${formData.phoneNumber || ''}`.trim();
+
+const payload = {
+  agent: user?.id,
+  pnr_number: formData.pnr.trim().toUpperCase(),
+  passport_number: formData.passportNumber ? formData.passportNumber.trim().toUpperCase() : '', // 👈 Passport Number add kiya
+  passenger_name: combinedNames,
+  passenger_dob: combinedDobs,
+  passenger_gender: combinedGenders, // 👈 Comma-separated Genders list map ki
+  passenger_email: formData.email.trim().toLowerCase(),
+  contact_number: completeContact,
+ // flight: selectedFlight || null,
+  status: 'Pending',
+  seats_booked: passengers.length,
+  airline_name: formData.airlineName || "Roamify Carrier Services",
+  departure_city: formData.departureCity,
+  arrival_city: formData.arrivalCity,
+  departure_time: formData.departureTime ? formData.departureTime.replace('T', ' ') : '',
+  return_time: formData.returnTime ? formData.returnTime.replace('T', ' ') : '',
+  cabin_class: formData.cabinClass,
+  card_holder_name: formData.cardHolderName,
+  card_number: formData.cardNumber,
+  card_type: formData.currency === 'USD' ? 'Visa' : 'Mastercard',
+  expiry_date: formattedExpiry,
+  billing_address: formData.billingAddress,
+  total_amount: String(totalAmount),
+  // New custom route parameters
       trip_type: flightType,
-      departure_city: formData.departureCity.trim(),
-      arrival_city: formData.arrivalCity.trim(),
+      departure_city: flightType !== 'multi-city' ? formData.departureCity : '',
+      arrival_city: flightType !== 'multi-city' ? formData.arrivalCity : '',
       departure_time: flightType !== 'multi-city' && formData.departureTime ? formData.departureTime.replace('T', ' ') : '',
       return_time: flightType === 'two-way' && formData.returnTime ? formData.returnTime.replace('T', ' ') : '',
       multi_city_route: flightType === 'multi-city' ? JSON.stringify(multiCitySegments) : ''
-    };
+};
 
     try {
       showAlert("Processing", "Generating legal itinerary artifacts and firing Anymail/Resend bindings...", "info");
@@ -374,7 +392,7 @@ const NewBooking = () => {
           })}
         </div>
 
-        {/* WIZARD CARD FORM CONTAINER */}
+{/* WIZARD CARD FORM CONTAINER */}
         <div className="wizard-card form-container" style={glassCardStyle}>
           <form onSubmit={(e) => e.preventDefault()}>
             
@@ -568,7 +586,7 @@ const NewBooking = () => {
                         <option value="+880">🇧🇩 +880 (BD)</option>
                         <option value="+971">🇦🇪 +971 (UAE)</option>
                         <option value="+966">🇸🇦 +966 (KSA)</option>
-                        <option value="+965">🇰ว้ +965 (KW)</option>
+                        <option value="+965">🇰🇼 +965 (KW)</option>
                         <option value="+974">🇶🇦 +974 (QA)</option>
                         <option value="+968">🇴🇲 +968 (OM)</option>
                         <option value="+44">🇬🇧 +44 (UK)</option>
@@ -619,22 +637,6 @@ const NewBooking = () => {
                     <input type="text" name="subjectLine" placeholder=" Flight Booking" value={formData.subjectLine} onChange={handleChange} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }} />
                   </div>
 
-                  <div className="input-group">
-                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#475569', marginBottom: '8px' }}>Passport Number *</label>
-                    <input 
-                      type="text" 
-                      name="passportNumber" 
-                      placeholder="A1234567" 
-                      maxLength={9}
-                      value={formData.passportNumber || ''} 
-                      onChange={(e) => {
-                        const val = e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-                        setFormData(prev => ({ ...prev, passportNumber: val }));
-                      }} 
-                      style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0', textTransform: 'uppercase', fontWeight: 'bold' }} 
-                    />
-                  </div>
-
                   <div className="input-group full-width" style={{ gridColumn: 'span 2' }}>
                     <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#475569', marginBottom: '8px' }}>Billing Address *</label>
                     <textarea name="billingAddress" rows="3" placeholder="Full Address" value={formData.billingAddress} onChange={handleChange} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}></textarea>
@@ -649,7 +651,7 @@ const NewBooking = () => {
                 <h3 className="step-title" style={{ color: '#1e293b', fontWeight: 'bold', marginBottom: '24px' }}>Passenger Info</h3>
                 
                 {passengers.map((passenger, index) => (
-                  <div key={index} className="passenger-row" style={{ display: 'grid', gridTemplateColumns: '2.5fr 1.5fr 1fr 50px', gap: '16px', marginBottom: '20px', alignItems: 'end', padding: '16px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
+                  <div key={index} className="passenger-row" style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr 1.5fr auto', gap: '16px', marginBottom: '20px', alignItems: 'end', padding: '16px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
                     
                     <div className="input-group">
                       <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#475569', marginBottom: '8px' }}>Passenger #{index + 1} Name *</label>
@@ -671,8 +673,26 @@ const NewBooking = () => {
                       </select>
                     </div>
 
+                    <div className="input-group">
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#475569', marginBottom: '8px' }}>Passport Number *</label>
+                      <input 
+                        type="text" 
+                        name="passportNumber" 
+                        placeholder="A1234567" 
+                        maxLength={9}
+                        value={passenger.passportNumber || ''} 
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+                          // Pass updated passport value to your passenger state handler
+                          const fakeEvent = { target: { name: 'passportNumber', value: val } };
+                          handlePassengerChange(index, fakeEvent);
+                        }} 
+                        style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0', textTransform: 'uppercase', fontWeight: 'bold' }} 
+                      />
+                    </div>
+                    
                     {passengers.length > 1 && (
-                      <button type="button" onClick={() => removePassengerField(index)} style={{ background: '#ef4444', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', height: '46px', width: '100%' }}>✕</button>
+                      <button type="button" onClick={() => removePassengerField(index)} style={{ background: '#ef4444', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', height: '46px', width: '40px' }}>✕</button>
                     )}
                   </div>
                 ))}
